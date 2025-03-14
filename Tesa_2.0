@@ -1,0 +1,113 @@
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.options import Options
+import time
+import random
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
+
+# Google Sheets Setup
+scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+creds = ServiceAccountCredentials.from_json_keyfile_name('credentials.json', scope)
+client = gspread.authorize(creds)
+sheet = client.open("Hotel Deals").sheet1  # Replace with your sheet name
+
+# Selenium WebDriver Setup
+chrome_options = Options()
+chrome_options.add_argument("--headless")
+chrome_options.add_argument("--disable-blink-features=AutomationControlled")  # Helps prevent detection
+driver = webdriver.Chrome(options=chrome_options)
+
+# Constants
+GROUPON_HOTELS_URL = "https://www.groupon.com/hotels"
+NUM_HOTELS_TO_CHECK = 5  # Adjust as needed
+
+def get_random_hotels(driver, num_hotels=NUM_HOTELS_TO_CHECK):
+    """
+    Scrapes available hotel deals and randomly selects a set number.
+    """
+    driver.get(GROUPON_HOTELS_URL)
+    time.sleep(random.uniform(3, 6))  # Let the page load
+
+    hotel_elements = driver.find_elements(By.CLASS_NAME, "deal-title-class")  # Replace with actual class
+    hotel_data = []
+
+    for hotel in hotel_elements:
+        try:
+            hotel_name = hotel.text
+            hotel_url = hotel.find_element(By.TAG_NAME, "a").get_attribute("href")  # Get the link
+            if hotel_name and hotel_url:
+                hotel_data.append((hotel_name, hotel_url))
+        except:
+            continue  # Skip errors
+
+    return random.sample(hotel_data, min(num_hotels, len(hotel_data)))
+
+def check_purchasability(driver, hotel_name, hotel_url):
+    """
+    Checks if the "Book Now" button is available.
+    """
+    driver.get(hotel_url)
+    time.sleep(random.uniform(3, 6))  # Let the page load
+
+    try:
+        book_now_button = driver.find_element(By.XPATH, "//button[contains(text(), 'Book Now')]")
+        if book_now_button.is_displayed() and book_now_button.is_enabled():
+            return "Purchasable"
+    except:
+        pass
+
+    return "Not Purchasable"
+
+def attempt_purchase(driver):
+    """
+    Attempts to simulate a purchase by selecting dates and proceeding to checkout.
+    """
+    try:
+        # Select a random available date
+        available_dates = driver.find_elements(By.CLASS_NAME, "date-picker-class")  # Replace with actual class
+        if available_dates:
+            random.choice(available_dates).click()
+            time.sleep(2)
+
+        # Click "Book Now"
+        book_now_button = driver.find_element(By.XPATH, "//button[contains(text(), 'Book Now')]")
+        book_now_button.click()
+        time.sleep(3)
+
+        # Check if it reaches checkout
+        if "checkout" in driver.current_url:
+            return "Success"
+    except Exception as e:
+        print(f"❌ Purchase failed: {e}")
+
+    return "Failure"
+
+def log_to_sheets(hotel_name, hotel_url, status, purchase_status="Not Attempted"):
+    """
+    Logs results to Google Sheets.
+    """
+    sheet.append_row([hotel_name, hotel_url, status, purchase_status])
+
+def main():
+    """
+    Main function to scrape hotels, check availability, attempt purchases, and log results.
+    """
+    hotel_list = get_random_hotels(driver, NUM_HOTELS_TO_CHECK)
+
+    for hotel_name, hotel_url in hotel_list:
+        status = check_purchasability(driver, hotel_name, hotel_url)
+
+        purchase_status = "Not Attempted"
+        if status == "Purchasable":
+            purchase_status = attempt_purchase(driver)
+
+        log_to_sheets(hotel_name, hotel_url, status, purchase_status)
+
+        print(f"🔎 {hotel_name} | Status: {status} | Purchase: {purchase_status} | Logged.")
+
+    driver.quit()
+
+if __name__ == "__main__":
+    main()
