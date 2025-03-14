@@ -1,0 +1,64 @@
+import React, { useEffect, useState } from "react";
+import axios from "axios";
+import { Table } from "@/components/ui/table";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+
+export default function GrouponDashboard() {
+  const [deals, setDeals] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/groupon-deals") // Endpoint for fetching stored deals from SQLite database
+      .then((res) => res.json())
+      .then((data) => {
+        setLoading(false);
+        setDeals(data);
+      })
+      .catch((error) => console.error("Error fetching deals:", error));
+  }, []);
+
+  return (
+    <div className="p-6 max-w-4xl mx-auto">
+      <h1 className="text-2xl font-bold">Groupon Deals Dashboard</h1>
+      {loading ? (
+        <p>Loading deals...</p>
+      ) : (
+        <table className="table-auto w-full mt-4 border">
+          <thead>
+            <tr>
+              <th className="border p-2">Hotel Name</th>
+              <th className="text-center">Status</th>
+              <th className="text-center">Purchase Status</th>
+              <th className="text-right">View Deal</th>
+            </tr>
+          </thead>
+          <tbody>
+            {deals.map((deal, index) => (
+              <tr key={index} className="border-t">
+                <td className="border p-2">{deal.hotel_name}</td>
+                <td className={deal.status === "Purchasable" ? "text-green-600" : "text-red-600"}>
+                  {deal.status}
+                </td>
+                <td>
+                  <a
+                    href={deal.hotel_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-500 underline"
+                  >
+                    View Deal
+                  </a>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </div>
+  );
+}
+
+export default function Dashboard() {
+  return <GrouponDashboard />;
+}
