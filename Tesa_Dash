@@ -1,64 +1,49 @@
-import React, { useEffect, useState } from "react";
-import axios from "axios";
-import { Table } from "@/components/ui/table";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+from dash import dcc, html, dash_table
+import requests
+import dash
 
-export default function GrouponDashboard() {
-  const [deals, setDeals] = useState([]);
-  const [loading, setLoading] = useState(true);
+# Initialize the Dash app
+app = dash.Dash(__name__)
 
-  useEffect(() => {
-    fetch("/api/groupon-deals") // Endpoint for fetching stored deals from SQLite database
-      .then((res) => res.json())
-      .then((data) => {
-        setLoading(false);
-        setDeals(data);
-      })
-      .catch((error) => console.error("Error fetching deals:", error));
-  }, []);
-
-  return (
-    <div className="p-6 max-w-4xl mx-auto">
-      <h1 className="text-2xl font-bold">Groupon Deals Dashboard</h1>
-      {loading ? (
-        <p>Loading deals...</p>
-      ) : (
-        <table className="table-auto w-full mt-4 border">
-          <thead>
-            <tr>
-              <th className="border p-2">Hotel Name</th>
-              <th className="text-center">Status</th>
-              <th className="text-center">Purchase Status</th>
-              <th className="text-right">View Deal</th>
-            </tr>
-          </thead>
-          <tbody>
-            {deals.map((deal, index) => (
-              <tr key={index} className="border-t">
-                <td className="border p-2">{deal.hotel_name}</td>
-                <td className={deal.status === "Purchasable" ? "text-green-600" : "text-red-600"}>
-                  {deal.status}
-                </td>
-                <td>
-                  <a
-                    href={deal.hotel_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-500 underline"
-                  >
-                    View Deal
-                  </a>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-    </div>
-  );
+# Fetch data from the NASA API
+API_KEY = "p4xCFCHufvXqbZwd4NAV5EEkQAxm6GytdV3dm9AV"
+URL = "https://api.nasa.gov/planetary/apod"
+params = {
+    "api_key": API_KEY,
+    "count": 100
 }
+response = requests.get(URL, params=params)
+data = response.json()
 
-export default function Dashboard() {
-  return <GrouponDashboard />;
-}
+# Define the layout of the app
+app.layout = html.Div(
+    children=[
+        html.H1("Pretend this is Groupon Data (I can only access free APIs now)/Howdy y'all! I done found some issues with thesfe deals sugar!", style={"textAlign": "center"}),  # Title
+        html.H3(f"Total Deals Reviewed: {len(data)}", style={"textAlign": "center"}),  # Display count of URLs
+        dash_table.DataTable(
+            id='image-table',
+            columns=[
+                {"name": "Index", "id": "number"},
+                {"name": "Property", "id": "title"},
+                {"name": "Purchasable Y/N (can't do that due to data)", "id": "description"},
+                {"name": "Deal Page", "id": "image_url"},
+            ],
+            data=[{
+                "number": i + 1,  # Row number
+                "title": item.get('title', 'No Title Available'),
+                "description": item.get('explanation', 'No Description Available'),
+                "image_url": item.get('url', 'No URL Available')  # Safely get the URL or display a message if missing
+            } for i, item in enumerate(data)],
+            
+            # Center all text in the table
+            style_table={'height': '800px', 'overflowY': 'auto'},  # Set table height
+            style_cell={'padding': '10px', 'textAlign': 'center'},  # Center cell content
+            style_header={'backgroundColor': 'rgb(230, 230, 230)', 'fontWeight': 'bold', 'textAlign': 'center'},  # Header styling
+            style_data={'whiteSpace': 'normal', 'height': 'auto'},  # Text wrapping for data
+        ),
+    ],
+    style={'display': 'flex', 'flexDirection': 'column', 'alignItems': 'center'}  # Center entire page content
+)
+
+# Run the server
+app.run(debug=True)
