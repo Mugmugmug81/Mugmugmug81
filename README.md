@@ -1,4 +1,4 @@
-- 👋 Hi, I’m @Mugmugmug81
+- 👋 Hi, I’m Alex! I'm a Program Manager by title, but at heart, I'm a dedicated problem-solver and process optimizer who thrives on tackling complex operational challenges.
 - 👀 I’m interested in learning how to code with Python and Java (for Google scripts)
 - 🌱 I’m currently learning Java, Python, and SQL
 - 💞️ I’m looking to collaborate on anything, I'm open to experience
